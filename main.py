@@ -1,6 +1,7 @@
 import time
 import re
 from bs4 import BeautifulSoup
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -13,9 +14,27 @@ def contains_in_list(element, list):
             return True
     return False
 
+options = webdriver.ChromeOptions()
+options.add_argument("--disable-blink-features=AutomationControlled")
+options.add_experimental_option("excludeSwitches", ["enable-automation"])
+options.add_experimental_option("useAutomationExtension", False)
+
 #Авторизация
-driver = webdriver.Chrome()
-driver.get("https://www.favbet.ua/uk/login/?from=header-desktop")
+driver = webdriver.Chrome(options=options)
+
+driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+    'source': '''
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_JSON;
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Object;
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Proxy;
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Window;
+    '''
+})
+
+driver.get("https://www.favbet.ua/uk/login")
 time.sleep(5)
 
 email_field = driver.find_element("id", "email")
@@ -37,13 +56,13 @@ driver.fullscreen_window()
 
 time.sleep(5)
 
-soup = BeautifulSoup(driver.page_source, 'lxml')
+soup = BeautifulSoup(driver.page_source, 'html.parser')
 selector_for_bets = "div.Bet_container--lCz:contains('Невизначено') span[data-role='bets-history-text-copy-id-text']"
 parse_bets = soup.select(selector_for_bets)
 
 bets_ids = []
 previous_bets_ids = []
-path = "./screenhots/file.png"
+path = "./screenshots/file.png"
 
 for bet in parse_bets:
     bet_id = re.search("\d+", bet.get_text())
