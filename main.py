@@ -7,6 +7,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def contains_in_list(element, list):
     for list_element in list:
@@ -38,10 +42,10 @@ driver.get("https://www.favbet.ua/uk/login")
 time.sleep(5)
 
 email_field = driver.find_element("id", "email")
-email_field.send_keys("polina.meshchanova@gmail.com")
+email_field.send_keys(os.getenv("EMAIL"))
 
 password_field = driver.find_element("id", "password")
-password_field.send_keys("Abuba123")
+password_field.send_keys(os.getenv("PASSWORD"))
 
 enter_button = driver.find_element("css selector", "form> button[data-role='login-page-submit-btn']")
 enter_button.click()
