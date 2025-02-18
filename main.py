@@ -1,16 +1,17 @@
 import time
 import re
 from bs4 import BeautifulSoup
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
 import os
 from dotenv import load_dotenv
+from telegram import Bot
+import asyncio
 
 load_dotenv()
+
+async def send_photo(path):
+    with open(path, 'rb') as file:
+        await bot.send_photo(chat_id=os.getenv('CHAT_ID'), photo=file)
 
 def contains_in_list(element, list):
     for list_element in list:
@@ -22,6 +23,8 @@ options = webdriver.ChromeOptions()
 options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
 options.add_experimental_option("useAutomationExtension", False)
+
+bot = Bot(token=os.getenv("BOT_TOKEN"))
 
 #Авторизация
 driver = webdriver.Chrome(options=options)
@@ -75,7 +78,9 @@ for bet in parse_bets:
 if not previous_bets_ids and bets_ids:
     previous_bets_ids = bets_ids.copy()
     driver.save_screenshot(path)
-    #Вызов телеграм бота ?
+
+    asyncio.run(send_photo(path))
+
     print("copied")
 else:
     for bet_id in bets_ids:
@@ -83,7 +88,8 @@ else:
             print("not contains!" + bet_id)
             previous_bets_ids.append(bet_id)
             driver.save_screenshot(path)
-            #Вызов телеграм бота ?
+
+            asyncio.run(send_photo(path))
 
 for bet_id in previous_bets_ids:
     print(bet_id)
