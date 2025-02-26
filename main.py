@@ -1,15 +1,15 @@
 import time
+import requests
 import re
 from bs4 import BeautifulSoup
 from selenium import webdriver
 import os
 from dotenv import load_dotenv
-from telegram import Bot
-import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
 import datetime
 
+path = "./screenshots/file.png"
 
 def setup_logging():
     log_folder = "logs"
@@ -26,10 +26,14 @@ def setup_logging():
                         ])
     logging.info("Logging setup completed.")
 
-async def send_photo(path):
-    with open(path, 'rb') as file:
-        await bot.send_photo(chat_id=os.getenv('CHAT_ID'), photo=file)
-        logging.info(f"Screenshot sent: {path}")
+def send_photo_request():
+    base_url = f"https://api.telegram.org/bot{os.getenv('BOT_TOKEN')}/sendPhoto"
+    files = {'photo': open(path, 'rb')}
+    parameters = {
+        "chat_id": os.getenv('CHAT_ID')
+    }
+    resp = requests.get(base_url, files=files, data=parameters)
+    logging.info(f"Screenshot sent: {resp}")
 
 def contains_in_list(element, list):
     return element in list
@@ -72,15 +76,14 @@ def check_bets(bets_ids, previous_bets_ids):
     if not previous_bets_ids and bets_ids:
         previous_bets_ids.extend(bets_ids)
         driver.save_screenshot(path)
-        asyncio.run(send_photo(path))
+        send_photo_request()
         logging.info(f"First bets found: {bets_ids}")
     else:
         for bet_id in bets_ids:
             if not contains_in_list(bet_id, previous_bets_ids):
                 previous_bets_ids.append(bet_id)
                 driver.save_screenshot(path)
-                asyncio.run(send_photo(path))
-
+                send_photo_request()
                 logging.info(f"New bet detected: {bet_id}")
 
 def cloudflare_security_optional(driver):
@@ -101,7 +104,6 @@ def cloudflare_security_optional(driver):
 
 if __name__ == "__main__":
     load_dotenv()
-
     setup_logging()
 
     logging.info("Starting Favbet Bot...")
@@ -116,21 +118,19 @@ if __name__ == "__main__":
 
     cloudflare_security_optional(driver)
 
-    bot = Bot(token=os.getenv("BOT_TOKEN"))
-
+    # Авторизация
     autorization(driver)
     time.sleep(5)
 
     logging.info("Navigated to bet history page.")
     driver.get("https://www.favbet.ua/uk/personal-office/bets/sport/")
 
-    # Nachalo cykla
+    previous_bets_ids = []
+
     while True:
         time.sleep(15)
-
+        # Парсинг открытых ставок
         bets_ids = parse_bets(driver)
-        previous_bets_ids = []
-        path = "./screenshots/file.png"
 
         # Поиск новых ставок
         check_bets(bets_ids, previous_bets_ids)
@@ -138,9 +138,6 @@ if __name__ == "__main__":
         logging.info("Page refreshed.")
         driver.refresh()
 
-    # Конец цикла
-
     logging.info("Script execution finished.")
-    time.sleep(5)
     driver.close()
     logging.info("WebDriver closed.")
